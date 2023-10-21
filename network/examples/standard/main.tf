@@ -27,7 +27,7 @@ output "service_cidr_object" {
   value = module.vcn.service_cidr
 }
 
-output " nat_gateway_object" {
+output "nat_gateway_object" {
   value = module.vcn.nat_gateway
 }
 
