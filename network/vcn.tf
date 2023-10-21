@@ -42,7 +42,7 @@ variable "lockdown_defaults" {
 
 variable "create_service_gateway" {
     type = bool 
-    default = true
+    default = false
     description = "provides access to services in the Oracle Services Network: https://www.oracle.com/cloud/networking/service-gateway/service-gateway-supported-services/"
 }
 variable "only_object_storage" {
