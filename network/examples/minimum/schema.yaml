@@ -2,8 +2,8 @@
 # All rights reserved. Licensed under the Universal Permissive License (UPL), Version 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 
-title: "Simple Secret Stack"
-description: "This example stack shows the minimum configuration needed for the secret module. Assumes an existing vault and AES key"
+title: "minimum network example"
+description: "This example stack shows the minimum requirements of the network module"
 schemaVersion: 1.1.0
 version: "20190404" 
 
@@ -19,6 +19,10 @@ variableGroups:
       - current_user_ocid
       - fingerprint
       - private_key_path
+  - title: "Minimum Requirements"
+    variables:
+      - compartment_id
+      - vcn_display_name
 
 
 variables:
@@ -45,3 +49,15 @@ variables:
   private_key_path:
     type: string
     default: " "
+
+  
+  compartment_id:
+    type: oci:identity:compartment:id
+    title: Compartment ID
+    description: compartment to deploy resources in 
+    required: true 
+  vcn_display_name:
+    type: string 
+    title: VCN Name 
+    description: user friendly name to refer to the vcn
+    required: true 

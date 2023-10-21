@@ -5,9 +5,20 @@
 
 # inputs
 
+variable "compartment_id" {
+  type = string
+}
+
+variable "vcn_display_name" {
+  type = string
+}
 
 # outputs
 
+output "vcn_object" {
+    value = module.vcn.vcn 
+    description = ""
+}
 
 # logic
 
@@ -19,8 +30,6 @@ module "vcn" {
     # https://developer.hashicorp.com/terraform/language/modules/sources#module-sources
    source = "../../"
 
-    compartment_id = var.tenancy_ocid
-    vcn_display_name = "MyVCN"
-    create_nat_gateway = true 
-    create_internet_gateway = true
+    compartment_id = var.compartment_id
+    vcn_display_name = var.vcn_display_name
 }
