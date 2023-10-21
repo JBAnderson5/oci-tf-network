@@ -50,7 +50,6 @@ variables:
     type: string
     default: " "
 
-  
   compartment_id:
     type: oci:identity:compartment:id
     title: Compartment ID
