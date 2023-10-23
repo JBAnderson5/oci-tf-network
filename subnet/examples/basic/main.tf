@@ -27,10 +27,9 @@ module "subnet" {
     # source = "github.com/oracle-devrel/terraform-oci-oracle-cloud-foundation//cloud-foundation/modules/cloud-foundation-library/network-subnet/module?ref=<input latest git tag>"
     source = "../../"
 
-    compartment = var.network_compartment
+    compartment_id = var.network_compartment
     vcn = var.vcn
-    prefix = "ebs"
-    internet_access = "nat"
+    prefix = "basic"
     ssh_cidr = "0.0.0.0/0"
     cidr_block = "10.0.1.0/24"
     /*

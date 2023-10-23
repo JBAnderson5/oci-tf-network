@@ -35,12 +35,9 @@ variable "service_gateway" {
 
 variable "vcn_cidrs" {
   type        = list(string)
-  description = "A list of cidr blocks to enable ICMP security rules to. Typically the list of cidr blocks from the vcn"
+  default = null 
+  description = "A list of cidr blocks to enable ICMP security rules to. omit to use the list of cidr blocks from the vcn"
 }
-
-
-
-
 
 
 # outputs
