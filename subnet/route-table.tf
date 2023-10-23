@@ -82,7 +82,7 @@ resource "oci_core_route_table" "this" {
     count = var.existing_route_table_id == null ? 1 : 0
   #Required
   compartment_id = var.compartment_id
-  vcn_id         = var.vcn
+  vcn_id         = local.vcn.id
 
   display_name = "${local.prefix}RT"
 

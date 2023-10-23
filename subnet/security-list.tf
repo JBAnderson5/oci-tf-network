@@ -168,7 +168,7 @@ locals {
 resource "oci_core_security_list" "this" {
   #Required
   compartment_id = var.compartment_id
-  vcn_id         = var.vcn
+  vcn_id         = local.vcn.id
 
   display_name = "${local.prefix}SL"
 

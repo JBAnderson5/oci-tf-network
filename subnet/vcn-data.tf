@@ -70,7 +70,7 @@ locals {
   cidr_blocks = (
     var.vcn_cidrs != null
     ? var.vcn_cidrs
-    : var.network == null
+    : var.network != null
     ? var.network.vcn.cidr_blocks
     : var.vcn.cidr_blocks
   )
