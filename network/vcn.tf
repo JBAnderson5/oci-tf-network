@@ -84,7 +84,7 @@ output "service_gateway" {
 }
 
 output "service_cidr" {
-  value = var.create_service_gateway ? data.oci_core_services.all_oci_services[0].services[0] : null
+  value = var.create_service_gateway ? data.oci_core_services.this[0].services[0] : null
   description = "https://registry.terraform.io/providers/oracle/oci/latest/docs/data-sources/core_services#attributes-reference"
 }
 
@@ -102,6 +102,10 @@ output "internet_gateway" {
 # locals
 
 
+locals {
+  vcn_dns_label = substr (var.vcn_dns_label, 0, 15)
+}
+
 # resource or mixed module blocks
 
 
@@ -112,7 +116,7 @@ resource "oci_core_vcn" "this" {
   display_name   = var.vcn_display_name
 
   cidr_blocks = var.cidr_blocks
-  dns_label   = var.vcn_dns_label
+  dns_label   = local.vcn_dns_label
 }
 
 
@@ -137,7 +141,7 @@ resource "oci_core_default_dhcp_options" "this" {
 
 
 # SGW
-data "oci_core_services" "all_oci_services" {
+data "oci_core_services" "this" {
     count = var.create_service_gateway == true ? 1 : 0
 
   filter {
@@ -154,7 +158,7 @@ resource "oci_core_service_gateway" "this" {
   vcn_id = oci_core_vcn.this.id
 
   services {
-    service_id = data.oci_core_services.all_oci_services[0].services[0].id
+    service_id = data.oci_core_services.this[0].services[0].id
   }
 
 }
