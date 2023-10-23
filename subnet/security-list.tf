@@ -3,57 +3,18 @@
 
 # inputs
 
+variable "existing_sl_ids" {
+  type = list(string)
+  default = null 
+  description = "a list of existing sl ids"
+}
+
+
+# egress
 variable "all_outbound_traffic" {
   type        = bool
   default     = true
   description = "creates security rule allowing all egress traffic out to anywhere"
-}
-
-variable "ssh_cidr" {
-  type        = string
-  default     = null
-  description = "the cidr block to allow ssh traffic on. Common values are 0.0.0.0/0 your vcn cidr or your bastion subnet cidr"
-}
-
-variable "standard_icmp" {
-  type        = bool
-  default     = true
-  description = "if true, turns on some standard icmp traffic"
-}
-
-variable "icmp_ingress_cidrs" {
-  type = list(string)
-  default = []
-  description = "list of cidr blocks to allow all icmp traffic from"
-}
-
-variable "icmp_egress_cidrs" {
-  type = list(string)
-  default = []
-  description = "list of cidr blocks to allow all icmp traffic out to"
-}
-
-variable "icmp_egress_service" {
-  type = bool 
-  default = false 
-  description = "if true, allows all icmp traffic out to oracle services network"
-}
-
-
-variable "custom_tcp_ingress_rules" {
-  type = map(object({
-        source_cidr   = string,
-        min = number,
-        max = number,
-  }))
-
-  default = {}
-  description = "creates stateful tcp security list rules to a range of destination ports from any port with a specific source cidr"
-}
-variable "tcp_all_ports_ingress_cidrs" {
-  type = list(string)
-  default = []
-  description = "used to create stateful tcp security list rules to all destination ports from the given list of source cidrs"
 }
 
 variable "custom_tcp_egress_rules" {
@@ -72,7 +33,57 @@ variable "tcp_all_ports_egress_cidrs" {
   description = "used to creste stateful rcp security list rules from all destination ports to the given list of source cidrs"
 }
 
+variable "custom_udp_egress_rules" {
+    type = map(object({
+        dest_cidr   = string,
+        min = number,
+        max = number,
+  }))
+   default = {}
+  description = "creates stateful udp security list rules from a range of destination ports to any port with a specific destination cidr"
+}
 
+variable "icmp_egress_cidrs" {
+  type = list(string)
+  default = []
+  description = "list of cidr blocks to allow all icmp traffic out to"
+}
+
+variable "icmp_egress_service" {
+  type = bool 
+  default = false 
+  description = "if true, allows all icmp traffic out to oracle services network"
+}
+
+
+
+
+# ingress
+
+variable "ssh_cidr" {
+  type        = string
+  default     = null
+  description = "the cidr block to allow ssh traffic on. Common values are 0.0.0.0/0 your vcn cidr or your bastion subnet cidr"
+}
+
+
+
+
+variable "custom_tcp_ingress_rules" {
+  type = map(object({
+        source_cidr   = string,
+        min = number,
+        max = number,
+  }))
+
+  default = {}
+  description = "creates stateful tcp security list rules to a range of destination ports from any port with a specific source cidr"
+}
+variable "tcp_all_ports_ingress_cidrs" {
+  type = list(string)
+  default = []
+  description = "used to create stateful tcp security list rules to all destination ports from the given list of source cidrs"
+}
 
 
 variable "custom_udp_ingress_rules" {
@@ -85,14 +96,16 @@ variable "custom_udp_ingress_rules" {
   description = "creates stateful udp security list rules to a range of destination ports from any port with a specific source cidr"
 }
 
-variable "custom_udp_egress_rules" {
-    type = map(object({
-        dest_cidr   = string,
-        min = number,
-        max = number,
-  }))
-   default = {}
-  description = "creates stateful udp security list rules from a range of destination ports to any port with a specific destination cidr"
+variable "standard_icmp" {
+  type        = bool
+  default     = true
+  description = "if true, turns on some standard icmp traffic"
+}
+
+variable "icmp_ingress_cidrs" {
+  type = list(string)
+  default = []
+  description = "list of cidr blocks to allow all icmp traffic from"
 }
 
 
@@ -110,6 +123,41 @@ output "security_list" {
 
 locals {
 
+  security_ids_list = var.existing_sl_ids != null ? var.existing_sl_ids : [oci_core_security_list.this.id]
+
+
+  # 8 configurations for security rule dynamic blocks
+  # egress
+  #   - general - all ports for a given protocol
+  #   - tcp
+  #   - udp
+  #   - icmp
+  # ingress 
+  #   - general - all ports for a given protocol
+  #   - tcp
+  #   - udp
+  #   - icmp
+
+  general_egress_security_rules = merge (
+    var.all_outbound_traffic ? { "egress_traffic" = {
+      protocol    = "all"
+      destination = var.egress_traffic_location
+      description = "allow all types of outbound traffic anywhere"
+    } } : {},
+    {for destination in var.tcp_all_ports_egress_cidrs : destination => {
+      protocol = "6"
+      destination = destination
+      description = "statefull tcp egress traffic to destination"
+    }},
+    
+
+
+  )
+
+
+  general_ingress_security_rules = merge (
+
+  )
 
 }
 
@@ -128,14 +176,15 @@ resource "oci_core_security_list" "this" {
 # Egress Rules
 
   dynamic "egress_security_rules" {
-    for_each = var.all_outbound_traffic ? { "create" = true } : {}
+    for_each = local.general_egress_security_rules
     content {
-      protocol    = "all"
-      destination = "0.0.0.0/0"
-      description = "allow all types of outbound traffic anywhere"
+      protocol    = egress_security_rules.value.protocol
+      destination = egress_security_rules.value.destination
+      description = egress_security_rules.value.description
     }
   }
 
+  
   dynamic "egress_security_rules" {
     //allow custom tcp traffic to specific ports from any port in a specific cidr range
     for_each = var.custom_tcp_egress_rules
@@ -148,15 +197,6 @@ resource "oci_core_security_list" "this" {
       }
     }
   }
-  dynamic "egress_security_rules" {
-    //allows tcp traffic from all ports
-    for_each = toset(var.tcp_all_ports_egress_cidrs)
-    content {
-      protocol = "6"
-      destination = egress_security_rules.value
-    }
-  }
-
 
   dynamic "egress_security_rules" {
     for_each = var.icmp_egress_service ? { "create" = true } : {}
@@ -179,7 +219,7 @@ resource "oci_core_security_list" "this" {
 
   dynamic "egress_security_rules" {
     //allow traffic to the Oracle Services Network via SGW
-    for_each = var.service_gateway && var.internet_access != "full" ? { "create" = true } : {}
+    for_each = var.service_gateway && local.internet_access != "full" ? { "create" = true } : {}
     content {
       protocol = "6"
       destination_type = "SERVICE_CIDR_BLOCK"
@@ -254,7 +294,7 @@ resource "oci_core_security_list" "this" {
 
 dynamic "ingress_security_rules" {
     //allow traffic to the Oracle Services Network via SGW
-    for_each = var.service_gateway && var.internet_access != "full" ? { "create" = true } : {}
+    for_each = var.service_gateway && local.internet_access != "full" ? { "create" = true } : {}
     content {
       protocol = "6"
       source_type = "SERVICE_CIDR_BLOCK"
