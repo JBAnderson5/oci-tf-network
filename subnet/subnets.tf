@@ -40,7 +40,7 @@ locals {
 
 
   # trim dns label to be no more than 15 characters
-  subnet_dns_label = substr(var.subnet_dns_label, 0, 15)
+  subnet_dns_label = var.subnet_dns_label != null ? substr(var.subnet_dns_label, 0, 15) : null
 
 }
 

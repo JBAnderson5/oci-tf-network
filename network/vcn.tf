@@ -103,7 +103,7 @@ output "internet_gateway" {
 
 
 locals {
-  vcn_dns_label = substr (var.vcn_dns_label, 0, 15)
+  vcn_dns_label = var.vcn_dns_label != null ? substr (var.vcn_dns_label, 0, 15) : null
 }
 
 # resource or mixed module blocks
