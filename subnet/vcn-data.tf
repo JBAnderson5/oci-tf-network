@@ -70,9 +70,7 @@ locals {
   cidr_blocks = (
     var.vcn_cidrs != null
     ? var.vcn_cidrs
-    : var.network != null
-    ? var.network.vcn.cidr_blocks
-    : var.vcn.cidr_blocks
+    : local.vcn.cidr_blocks
   )
 
   service_cidr = (
@@ -80,7 +78,7 @@ locals {
     ? var.network.service_cidr.cidr_block
     : var.service_gateway != null 
     ? data.oci_core_services.this[0].services[0].cidr_block 
-    : null
+    : null )
 
 }
 
