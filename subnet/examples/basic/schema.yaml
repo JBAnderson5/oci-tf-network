@@ -2,8 +2,8 @@
 # All rights reserved. Licensed under the Universal Permissive License (UPL), Version 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 
-title: "Simple Secret Stack"
-description: "This example stack shows the minimum configuration needed for the secret module. Assumes an existing vault and AES key"
+title: "basic subnet stack"
+description: "This example stack shows a basic setup using the network and subnet modules"
 schemaVersion: 1.1.0
 version: "20190404" 
 
@@ -52,11 +52,9 @@ variables:
     default: " "
 
 
-  network_compartment:
+  compartment_id:
     type: oci:identity:compartment:id
     default: tenancy_ocid
 
-  vcn: 
-    type: oci:core:vcn:id
-    dependsOn:
-      compartmentId: network_compartment
+  vcn_display_name: 
+    type: string

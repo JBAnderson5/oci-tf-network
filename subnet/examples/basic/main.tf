@@ -55,7 +55,7 @@ module "subnet" {
     compartment_id = var.compartment_id
     network = module.vcn
     prefix = "basic"
-    ssh_cidr = "0.0.0.0/0"
+    subnet_dns_label = "mysubdomain"
     cidr_block = "10.0.1.0/24"
     
 }
