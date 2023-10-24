@@ -94,7 +94,7 @@ output "nat_gateway" {
 }
 
 output "internet_gateway" {
-  value = var.create_internet_gateway ? oci_core_internet_gateway.this[0].id : null
+  value = var.create_internet_gateway ? oci_core_internet_gateway.this[0] : null
   description = "https://registry.terraform.io/providers/oracle/oci/latest/docs/resources/core_internet_gateway#attributes-reference"
 }
 
