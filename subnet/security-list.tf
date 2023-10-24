@@ -15,15 +15,15 @@ variable "sl_rules" {
   description = "a map of security rule objects. required value is the destination/source cidr. direction: egress(default), ingress. protocols: tcp(default), udp, icmp. Recommended to specify a single port (min) or a range (min,max). Default allows access on all ports. icmp uses min for type and max(optional) for code"
 
   type = map(object({
-    direction = optional (string,"egress") # egress or ingress 
-    stateless = optional(bool,false)
+    direction = optional (string) # egress(default) or ingress 
+    stateless = optional(bool)
     dest_source_cidr = string # cidr block, special values: anywhere, service, vcn(1st cidr block)
-    protocol = optional(string, "tcp") # tcp, udp, or icmp 
-    min = optional(number,null), # if not provided, provides traffic to every port. icmp type
-    max = optional(number,null), # if not provided, provides traffic to just the min port specified. icmp code
+    protocol = optional(string) # tcp(default), udp, or icmp 
+    min = optional(number), # if not provided, provides traffic to every port. icmp type
+    max = optional(number), # if not provided, provides traffic to just the min port specified. icmp code
     # source_min = optional(number) # not supported yet
     # source_max = optional(number) # not supported yet
-    description = optional(string,null)
+    description = optional(string)
   }))
   default = {
       "egress_traffic" = {
@@ -144,17 +144,17 @@ resource "oci_core_security_list" "this" {
 
 
 dynamic "egress_security_rules" {
-    for_each = {for name,rule in var.sl_rules: name => rule if rule.directions == "egress"}
+    for_each = {for key,value in var.sl_rules: key => value if value.directions == "egress" || value.directions == null}
     iterator = rule 
     content {
-      protocol    = rule.value.protocol == "tcp" ? "6" : rule.value.protocol == "udp" ? "17" : "1"
+      protocol    = rule.value.protocol == "tcp" || rule.value.protocol == null ? "6" : rule.value.protocol == "udp" ? "17" : "1"
       destination = rule.value.dest_source_cidr == "service" ? local.service_cidr : rule.value.dest_source_cidr == "anywhere" ? var.anywhere : rule.value.dest_source_cidr == "vcn" ? local.vcn_cidrs[0] : rule.value.dest_source_cidr
       destination_type = rule.value.dest_source_cidr == "service" ? "SERVICE_CIDR_BLOCK" : "CIDR_BLOCK"
       stateless = rule.value.stateless
       description = rule.value.description
 
       dynamic "tcp_options" {
-        for_each = rule.value.protocol == "tcp" && rule.value.min != null ? rule : {}
+        for_each = rule.value.protocol == "tcp" || rule.value.protocol == null ? rule.value.min != null ? rule : {} : {}
         iterator = rule
         content {
         min = rule.value.min 
@@ -258,17 +258,17 @@ dynamic "egress_security_rules" {
 
   # open ports
  dynamic "ingress_security_rules" {
-    for_each = {for name,rule in var.sl_rules: name => rule if rule.directions == "ingress"}
+    for_each = {for key,value in var.sl_rules: key => value if value.directions == "ingress"}
     iterator = rule 
     content {
-      protocol    = rule.value.protocol == "tcp" ? "6" : rule.value.protocol == "udp" ? "17" : "1"
+      protocol    = rule.value.protocol == "tcp" || rule.value.protocol == null  ? "6" : rule.value.protocol == "udp" ? "17" : "1"
       source = rule.value.dest_source_cidr == "service" ? local.service_cidr : rule.value.dest_source_cidr == "anywhere" ? var.anywhere : rule.value.dest_source_cidr == "vcn" ? local.vcn_cidrs[0] : rule.value.dest_source_cidr
       source_type = rule.value.dest_source_cidr == "service" ? "SERVICE_CIDR_BLOCK" : "CIDR_BLOCK"
       stateless = rule.value.stateless
       description = rule.value.description
 
       dynamic "tcp_options" {
-        for_each = rule.value.protocol == "tcp" && rule.value.min != null ? rule : {}
+        for_each = rule.value.protocol == "tcp" || rule.value.protocol == null ? rule.value.min != null ? rule : {} : {}
         iterator = rule
         content {
         min = rule.value.min 
