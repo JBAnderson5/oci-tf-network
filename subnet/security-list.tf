@@ -31,11 +31,11 @@ variable "sl_rules" {
   },
   "service_gateway_traffic" = {
     dest_source_cidr = "service"
-  },
+  },/*
   "ssh_traffic" = {
     dest_source_cidr = "vcn"
     min = 22
-  },/*
+  },
     "icmp_service_traffic" = {
     protocol = "icmp"
     dest_source_cidr = "service"
