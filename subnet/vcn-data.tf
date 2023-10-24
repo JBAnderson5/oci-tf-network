@@ -42,7 +42,9 @@ variable "vcn_cidrs" {
 
 # outputs
 
-
+output "cidr_blocks" {
+  value = local.cidr_blocks
+}
 
 # logic
 
