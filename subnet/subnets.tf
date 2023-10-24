@@ -24,6 +24,12 @@ variable "cidr_block" {
 }
 
 
+variable "anywhere" {
+  type        = string
+  default     = "0.0.0.0/0"
+  description = "cidr block. destination used for traffic leaving through an internet or nat gateway"
+}
+
 
 # outputs
 

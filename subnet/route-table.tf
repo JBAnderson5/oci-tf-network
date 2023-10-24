@@ -18,11 +18,7 @@ variable "dynamic_routing_gateway_list" {
   description = "creates a route rule for each drg ocid in the list"
 }
 */
-variable "anywhere" {
-  type        = string
-  default     = "0.0.0.0/0"
-  description = "cidr block. destination used for traffic leaving through an internet or nat gateway"
-}
+
 
 # outputs
 
