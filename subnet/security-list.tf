@@ -40,13 +40,13 @@ variable "sl_rules" {
     protocol = "icmp"
     dest_source_cidr = "service"
 
-  },*/
+  },
   "icmp_vcn" = {
     direction = "ingress"
     protocol = "icmp"
     dest_source_cidr = "vcn"
     min = 3
-  }
+  }, */
   "icmp_anywhere" = {
     direction = "ingress"
     protocol = "icmp"
