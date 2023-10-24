@@ -75,56 +75,6 @@ locals {
 
   security_ids_list = var.existing_sl_ids != null ? var.existing_sl_ids : [oci_core_security_list.this[0].id]
 
-
-  # 8 configurations for security rule dynamic blocks
-  # egress
-  #   - general - all ports for a given protocol
-  #   - tcp
-  #   - udp
-  #   - icmp
-  # ingress 
-  #   - general - all ports for a given protocol
-  #   - tcp
-  #   - udp
-  #   - icmp
-
-
-  # split directions
-  egress_rules = {for name,rule in var.sl_rules: name => rule
-              if rule.directions == "egress"}
-
-  ingress_rules = {for name,rule in var.sl_rules: name => rule
-              if rule.directions == "ingress"}
-
-
-  # split egress protocols
-  all_ports_egress_security_rules = {for name,rule in local.egress_rules: name => rule
-              if rule.min == null}
-  
-  tcp_egress_security_rules = {for name,rule in local.egress_rules: name => rule
-            if rule.protocol == "tcp"}
-
-  udp_egress_security_rules = {for name,rule in local.egress_rules: name => rule
-            if rule.protocol == "udp"}
-
-  icmp_egress_security_rules = {for name,rule in local.egress_rules: name => rule
-            if rule.protocol == "icmp"}
-
-
-
-  # split ingress protocols
-  all_ports_ingress_security_rules = {for name,rule in local.ingress_rules: name => rule
-              if rule.min == null}
-  
-  tcp_ingress_security_rules = {for name,rule in local.ingress_rules: name => rule
-            if rule.protocol == "tcp"}
-
-  udp_ingress_security_rules = {for name,rule in local.ingress_rules: name => rule
-            if rule.protocol == "udp"}
-
-  icmp_ingress_security_rules = {for name,rule in local.ingress_rules: name => rule
-            if rule.protocol == "icmp"}
-
 }
 
 # resource or mixed module blocks
@@ -144,7 +94,7 @@ resource "oci_core_security_list" "this" {
 
 
 dynamic "egress_security_rules" {
-    for_each = {for key,value in var.sl_rules: key => value if value.directions == "egress" || value.directions == null}
+    for_each = {for key,value in var.sl_rules: key => value if value.direction == "egress" || value.direction == null}
     iterator = rule 
     content {
       protocol    = rule.value.protocol == "tcp" || rule.value.protocol == null ? "6" : rule.value.protocol == "udp" ? "17" : "1"
@@ -182,83 +132,15 @@ dynamic "egress_security_rules" {
 
     }
   }
-/*
-  # open ports
-  dynamic "egress_security_rules" {
-    for_each = local.all_ports_egress_security_rules
-    iterator = rule 
-    content {
-      protocol    = rule.value.protocol == "tcp" ? "6" : rule.value.protocol == "udp" ? "17" : "1"
-      destination = rule.value.dest_source_cidr == "service" ? local.service_cidr : rule.value.dest_source_cidr == "anywhere" ? var.anywhere : rule.value.dest_source_cidr == "vcn" ? local.vcn_cidrs[0] : rule.value.dest_source_cidr
-      destination_type = rule.value.dest_source_cidr == "service" ? "SERVICE_CIDR_BLOCK" : "CIDR_BLOCK"
-      stateless = rule.value.stateless
-      description = rule.value.description
-    }
-  }
 
 
-  # tcp  
-  dynamic "egress_security_rules" {
-    for_each = local.tcp_egress_security_rules
-    iterator = rule 
-    content {
-      protocol    = "6"
-      destination = rule.value.dest_source_cidr == "service_gateway" ? local.service_cidr : rule.value.dest_source_cidr == "anywhere" ? var.anywhere : rule.value.dest_source_cidr == "vcn" ? local.vcn_cidrs[0] : rule.value.dest_source_cidr
-      destination_type = rule.value.dest_source_cidr == "service_gateway" ? "SERVICE_CIDR_BLOCK" : "CIDR_BLOCK"
-      stateless = rule.value.stateless
-      description = rule.value.description
-      tcp_options {
-        min = rule.value.min 
-        max = rule.value.max != null ? rule.value.max : rule.value.min
-      }
-    }
-  }
-
-  # udp
-  dynamic "egress_security_rules" {
-    for_each = local.udp_egress_security_rules
-    iterator = rule 
-    content {
-      protocol    = "17"
-      destination = rule.value.dest_source_cidr == "service_gateway" ? local.service_cidr : rule.value.dest_source_cidr == "anywhere" ? var.anywhere : rule.value.dest_source_cidr == "vcn" ? local.vcn_cidrs[0] : rule.value.dest_source_cidr
-      destination_type = rule.value.dest_source_cidr == "service_gateway" ? "SERVICE_CIDR_BLOCK" : "CIDR_BLOCK"
-      stateless = rule.value.stateless
-      description = rule.value.description
-      udp_options {
-        min = rule.value.min 
-        max = rule.value.max != null ? rule.value.max : rule.value.min
-      }
-    }
-  }
-
-
-
-  # icmp
-
-
-dynamic "egress_security_rules" {
-    for_each = local.icmp_egress_security_rules
-    iterator = rule 
-    content {
-      protocol    = "1"
-      destination = rule.value.dest_source_cidr == "service_gateway" ? local.service_cidr : rule.value.dest_source_cidr == "anywhere" ? var.anywhere : rule.value.dest_source_cidr == "vcn" ? local.vcn_cidrs[0] : rule.value.dest_source_cidr
-      destination_type = rule.value.dest_source_cidr == "service_gateway" ? "SERVICE_CIDR_BLOCK" : "CIDR_BLOCK"
-      stateless = rule.value.stateless
-      description = rule.value.description
-      icmp_options {
-        type = rule.value.min 
-        code = rule.value.max 
-      }
-    }
-  }
-*/
 
 
 # Ingress Rules
 
   # open ports
  dynamic "ingress_security_rules" {
-    for_each = {for key,value in var.sl_rules: key => value if value.directions == "ingress"}
+    for_each = {for key,value in var.sl_rules: key => value if value.direction == "ingress"}
     iterator = rule 
     content {
       protocol    = rule.value.protocol == "tcp" || rule.value.protocol == null  ? "6" : rule.value.protocol == "udp" ? "17" : "1"
@@ -295,61 +177,5 @@ dynamic "egress_security_rules" {
       }
     }
   }
-
-/*
-# tcp
-dynamic "ingress_security_rules" {
-    for_each = local.tcp_ingress_security_rules
-    iterator = rule 
-    content {
-      protocol    = "6"
-      source = rule.value.dest_source_cidr == "service" ? local.service_cidr : rule.value.dest_source_cidr == "anywhere" ? var.anywhere : rule.value.dest_source_cidr == "vcn" ? local.vcn_cidrs[0] : rule.value.dest_source_cidr
-      source_type = rule.value.dest_source_cidr == "service" ? "SERVICE_CIDR_BLOCK" : "CIDR_BLOCK"
-      stateless = rule.value.stateless
-      description = rule.value.description
-      tcp_options {
-        min = rule.value.min 
-        max = rule.value.max != null ? rule.value.max : rule.value.min
-      }
-    }
-  }
-
-# udp
-
-dynamic "ingress_security_rules" {
-    for_each = local.udp_ingress_security_rules
-    iterator = rule 
-    content {
-      protocol    = "17"
-      source = rule.value.dest_source_cidr == "service" ? local.service_cidr : rule.value.dest_source_cidr == "anywhere" ? var.anywhere : rule.value.dest_source_cidr == "vcn" ? local.vcn_cidrs[0] : rule.value.dest_source_cidr
-      source_type = rule.value.dest_source_cidr == "service" ? "SERVICE_CIDR_BLOCK" : "CIDR_BLOCK"
-      stateless = rule.value.stateless
-      description = rule.value.description
-      udp_options {
-        min = rule.value.min 
-        max = rule.value.max != null ? rule.value.max : rule.value.min
-      }
-    }
-  }
-
-
-# icmp
-
-dynamic "ingress_security_rules" {
-    for_each = local.icmp_ingress_security_rules
-    iterator = rule 
-    content {
-      protocol    = "17"
-      source = rule.value.dest_source_cidr == "service" ? local.service_cidr : rule.value.dest_source_cidr == "anywhere" ? var.anywhere : rule.value.dest_source_cidr == "vcn" ? local.vcn_cidrs[0] : rule.value.dest_source_cidr
-      source_type = rule.value.dest_source_cidr == "service" ? "SERVICE_CIDR_BLOCK" : "CIDR_BLOCK"
-      stateless = rule.value.stateless
-      description = rule.value.description
-      icmp_options {
-        type = rule.value.min 
-        code = rule.value.max
-      }
-    }
-  }
-*/
 
 }
