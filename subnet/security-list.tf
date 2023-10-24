@@ -26,28 +26,28 @@ variable "sl_rules" {
     description = optional(string,null)
   }))
   default = {
-      "egress_traffic" => {
+      "egress_traffic" = {
       dest_source_cidr = "anywhere"
   },
-  "service_gateway_traffic" => {
+  "service_gateway_traffic" = {
     dest_source_cidr = "service"
   },
-  "ssh_traffic" => {
+  "ssh_traffic" = {
     dest_source_cidr = "vcn"
     min = 22
   },
-    "icmp_service_traffic" => {
+    "icmp_service_traffic" = {
     protocol = "icmp"
     dest_source_cidr = "service"
 
   },
-  "icmp_vcn" => {
+  "icmp_vcn" = {
     direction = "ingress"
     protocol = "icmp"
     dest_source_cidr = "vcn"
     min = 3
   }
-  "icmp_anywhere" => {
+  "icmp_anywhere" = {
     direction = "ingress"
     protocol = "icmp"
     dest_source_cidr = "anywhere"
