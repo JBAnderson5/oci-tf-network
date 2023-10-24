@@ -18,7 +18,7 @@ variable "dynamic_routing_gateway_list" {
   description = "creates a route rule for each drg ocid in the list"
 }
 */
-variable "egress_traffic_location" {
+variable "anywhere" {
   type        = string
   default     = "0.0.0.0/0"
   description = "cidr block. destination used for traffic leaving through an internet or nat gateway"
@@ -48,14 +48,14 @@ locals {
     local.nat_gateway != null ? { "nat_gateway" = {
       network_entity_id = local.nat_gateway.id
       description       = "Allow Nat Gateway routing for egress internet traffic"
-      destination       = var.egress_traffic_location
+      destination       = var.anywhere
       destination_type  = "CIDR_BLOCK"
     } } : {},
 
     local.internet_access == "full" ? { "internet_gateway" = {
       network_entity_id = local.internet_gateway.id
       description       = "Allow Internet Gateway routing"
-      destination       = var.egress_traffic_location
+      destination       = var.anywhere
       destination_type  = "CIDR_BLOCK"
     } } : {},
 

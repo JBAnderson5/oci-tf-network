@@ -5,15 +5,28 @@
 
 # inputs
 
-variable "network_compartment" {
+variable "compartment_id" {
   type = string
 }
 
-variable "vcn" {
-    type = string
+variable "vcn_display_name" {
+  type = string
 }
 
 # outputs
+
+output "subnet_object" {
+    value = module.subnet.subnet
+}
+
+output "sl_object" {
+    value = module.subnet.security_list
+}
+
+output "rt_object" {
+    value = module.subnet.route_table
+}
+
 
 
 # logic
@@ -22,21 +35,27 @@ variable "vcn" {
 # resource or mixed module blocks
 
 
+module "vcn" {
+    # https://developer.hashicorp.com/terraform/language/modules/sources#module-sources
+   source = "../../../network"
+
+    compartment_id = var.compartment_id
+    vcn_display_name = var.vcn_display_name
+    cidr_blocks = ["10.0.0.0/16"]
+    vcn_dns_label = "mydomain"
+
+    create_internet_gateway = true 
+    create_nat_gateway = true 
+    create_service_gateway = true
+}
+
 module "subnet" {
-    # pick a source type - github url with path and git tag is recommended for production code. local path is used for sub-module development and customization
-    # source = "github.com/oracle-devrel/terraform-oci-oracle-cloud-foundation//cloud-foundation/modules/cloud-foundation-library/network-subnet/module?ref=<input latest git tag>"
     source = "../../"
 
-    compartment_id = var.network_compartment
-    vcn = var.vcn
+    compartment_id = var.compartment_id
+    network = module.vcn
     prefix = "basic"
     ssh_cidr = "0.0.0.0/0"
     cidr_block = "10.0.1.0/24"
-    /*
-    custom_tcp_ingress_rules = { lb = {
-        source_cidr   = "10.0.0.0/24",
-        min = 8081,
-        max = 8081,
-    }}
-    */
+    
 }

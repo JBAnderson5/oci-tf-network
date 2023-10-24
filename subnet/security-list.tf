@@ -6,116 +6,66 @@
 variable "existing_sl_ids" {
   type = list(string)
   default = null 
-  description = "a list of existing sl ids"
+  description = "a list of existing sl ids. If provided, a security list will not be made"
 }
 
 
-# egress
-variable "all_outbound_traffic" {
-  type        = bool
-  default     = true
-  description = "creates security rule allowing all egress traffic out to anywhere"
-}
 
-variable "custom_tcp_egress_rules" {
+variable "sl_rules" {
+  description = "a map of security rule objects. required value is the destination/source cidr. direction: egress(default), ingress. protocols: tcp(default), udp, icmp. Recommended to specify a single port (min) or a range (min,max). Default allows access on all ports. icmp uses min for type and max(optional) for code"
+
   type = map(object({
-    dest_cidr = string,
-    min = number,
-    max = number
+    direction = optional (string,"egress") # egress or ingress 
+    stateless = optional(bool,false)
+    dest_source_cidr = string # cidr block, special values: anywhere, service, vcn(1st cidr block)
+    protocol = optional(string, "tcp") # tcp, udp, or icmp 
+    min = optional(number,null), # if not provided, provides traffic to every port. icmp type
+    max = optional(number,null), # if not provided, provides traffic to just the min port specified. icmp code
+    # source_min = optional(number) # not supported yet
+    # source_max = optional(number) # not supported yet
+    description = optional(string,null)
   }))
-  
-  default = {}
-  description = "creates statefull tcp security list rules from a range of destination ports to any port with a specific destination cidr"
-}
-variable "tcp_all_ports_egress_cidrs" {
-  type = list(string)
-  default = []
-  description = "used to creste stateful rcp security list rules from all destination ports to the given list of source cidrs"
-}
+  default = {
+      "egress_traffic" => {
+      dest_source_cidr = "anywhere"
+  },
+  "service_gateway_traffic" => {
+    dest_source_cidr = "service"
+  },
+  "ssh_traffic" => {
+    dest_source_cidr = "vcn"
+    min = 22
+  },
+    "icmp_service_traffic" => {
+    protocol = "icmp"
+    dest_source_cidr = "service"
 
-variable "custom_udp_egress_rules" {
-    type = map(object({
-        dest_cidr   = string,
-        min = number,
-        max = number,
-  }))
-   default = {}
-  description = "creates stateful udp security list rules from a range of destination ports to any port with a specific destination cidr"
-}
-
-variable "icmp_egress_cidrs" {
-  type = list(string)
-  default = []
-  description = "list of cidr blocks to allow all icmp traffic out to"
-}
-
-variable "icmp_egress_service" {
-  type = bool 
-  default = false 
-  description = "if true, allows all icmp traffic out to oracle services network"
-}
+  },
+  "icmp_vcn" => {
+    direction = "ingress"
+    protocol = "icmp"
+    dest_source_cidr = "vcn"
+    min = 3
+  }
+  "icmp_anywhere" => {
+    direction = "ingress"
+    protocol = "icmp"
+    dest_source_cidr = "anywhere"
+    min = 3
+    max = 4
+  },
 
 
-
-
-# ingress
-
-variable "ssh_cidr" {
-  type        = string
-  default     = null
-  description = "the cidr block to allow ssh traffic on. Common values are 0.0.0.0/0 your vcn cidr or your bastion subnet cidr"
 }
 
-
-
-
-variable "custom_tcp_ingress_rules" {
-  type = map(object({
-        source_cidr   = string,
-        min = number,
-        max = number,
-  }))
-
-  default = {}
-  description = "creates stateful tcp security list rules to a range of destination ports from any port with a specific source cidr"
 }
-variable "tcp_all_ports_ingress_cidrs" {
-  type = list(string)
-  default = []
-  description = "used to create stateful tcp security list rules to all destination ports from the given list of source cidrs"
-}
-
-
-variable "custom_udp_ingress_rules" {
-    type = map(object({
-        source_cidr   = string,
-        min = number,
-        max = number,
-  }))
-   default = {}
-  description = "creates stateful udp security list rules to a range of destination ports from any port with a specific source cidr"
-}
-
-variable "standard_icmp" {
-  type        = bool
-  default     = true
-  description = "if true, turns on some standard icmp traffic"
-}
-
-variable "icmp_ingress_cidrs" {
-  type = list(string)
-  default = []
-  description = "list of cidr blocks to allow all icmp traffic from"
-}
-
-
 
 
 # outputs 
 
 
 output "security_list" {
-  value = oci_core_security_list.this
+  value = var.existing_sl_ids != null ? null : oci_core_security_list.this[0]
 }
 
 # logic
@@ -123,7 +73,7 @@ output "security_list" {
 
 locals {
 
-  security_ids_list = var.existing_sl_ids != null ? var.existing_sl_ids : [oci_core_security_list.this.id]
+  security_ids_list = var.existing_sl_ids != null ? var.existing_sl_ids : [oci_core_security_list.this[0].id]
 
 
   # 8 configurations for security rule dynamic blocks
@@ -138,26 +88,42 @@ locals {
   #   - udp
   #   - icmp
 
-  general_egress_security_rules = merge (
-    var.all_outbound_traffic ? { "egress_traffic" = {
-      protocol    = "all"
-      destination = var.egress_traffic_location
-      description = "allow all types of outbound traffic anywhere"
-    } } : {},
-    {for destination in var.tcp_all_ports_egress_cidrs : destination => {
-      protocol = "6"
-      destination = destination
-      description = "statefull tcp egress traffic to destination"
-    }},
-    
+
+  # split directions
+  egress_rules = {for name,rule in var.sl_rules: name => rule
+              if rule.directions == "egress"}
+
+  ingress_rules = {for name,rule in var.sl_rules: name => rule
+              if rule.directions == "ingress"}
 
 
-  )
+  # split egress protocols
+  all_ports_egress_security_rules = {for name,rule in local.egress_rules: name => rule
+              if rule.min == null}
+  
+  tcp_egress_security_rules = {for name,rule in local.egress_rules: name => rule
+            if rule.protocol == "tcp"}
+
+  udp_egress_security_rules = {for name,rule in local.egress_rules: name => rule
+            if rule.protocol == "udp"}
+
+  icmp_egress_security_rules = {for name,rule in local.egress_rules: name => rule
+            if rule.protocol == "icmp"}
 
 
-  general_ingress_security_rules = merge (
 
-  )
+  # split ingress protocols
+  all_ports_ingress_security_rules = {for name,rule in local.ingress_rules: name => rule
+              if rule.min == null}
+  
+  tcp_ingress_security_rules = {for name,rule in local.ingress_rules: name => rule
+            if rule.protocol == "tcp"}
+
+  udp_ingress_security_rules = {for name,rule in local.ingress_rules: name => rule
+            if rule.protocol == "udp"}
+
+  icmp_ingress_security_rules = {for name,rule in local.ingress_rules: name => rule
+            if rule.protocol == "icmp"}
 
 }
 
@@ -166,6 +132,7 @@ locals {
 
 
 resource "oci_core_security_list" "this" {
+  count = var.existing_sl_ids == null ? 1 : 0
   #Required
   compartment_id = var.compartment_id
   vcn_id         = local.vcn.id
@@ -175,168 +142,214 @@ resource "oci_core_security_list" "this" {
 
 # Egress Rules
 
-  dynamic "egress_security_rules" {
-    for_each = local.general_egress_security_rules
+
+dynamic "egress_security_rules" {
+    for_each = {for name,rule in var.sl_rules: name => rule if rule.directions == "egress"}
+    iterator = rule 
     content {
-      protocol    = egress_security_rules.value.protocol
-      destination = egress_security_rules.value.destination
-      description = egress_security_rules.value.description
+      protocol    = rule.value.protocol == "tcp" ? "6" : rule.value.protocol == "udp" ? "17" : "1"
+      destination = rule.value.dest_source_cidr == "service" ? local.service_cidr : rule.value.dest_source_cidr == "anywhere" ? var.anywhere : rule.value.dest_source_cidr == "vcn" ? local.vcn_cidrs[0] : rule.value.dest_source_cidr
+      destination_type = rule.value.dest_source_cidr == "service" ? "SERVICE_CIDR_BLOCK" : "CIDR_BLOCK"
+      stateless = rule.value.stateless
+      description = rule.value.description
+
+      dynamic "tcp_options" {
+        for_each = rule.value.protocol == "tcp" && rule.value.min != null ? rule : {}
+        iterator = rule
+        content {
+        min = rule.value.min 
+        max = rule.value.max != null ? rule.value.max : rule.value.min
+        }
+      }
+
+      dynamic "udp_options" {
+        for_each = rule.value.protocol == "udp" && rule.value.min != null ? rule : {}
+        iterator = rule
+        content {
+        min = rule.value.min 
+        max = rule.value.max != null ? rule.value.max : rule.value.min
+        }
+      }
+
+      dynamic "icmp_options" {
+        for_each = rule.value.protocol == "icmp" && rule.value.min != null ? rule : {}
+        iterator = rule
+        content {
+        code = rule.value.min 
+        type = rule.value.max != null ? rule.value.max : rule.value.min
+        }
+      }
+
+    }
+  }
+/*
+  # open ports
+  dynamic "egress_security_rules" {
+    for_each = local.all_ports_egress_security_rules
+    iterator = rule 
+    content {
+      protocol    = rule.value.protocol == "tcp" ? "6" : rule.value.protocol == "udp" ? "17" : "1"
+      destination = rule.value.dest_source_cidr == "service" ? local.service_cidr : rule.value.dest_source_cidr == "anywhere" ? var.anywhere : rule.value.dest_source_cidr == "vcn" ? local.vcn_cidrs[0] : rule.value.dest_source_cidr
+      destination_type = rule.value.dest_source_cidr == "service" ? "SERVICE_CIDR_BLOCK" : "CIDR_BLOCK"
+      stateless = rule.value.stateless
+      description = rule.value.description
     }
   }
 
-  
+
+  # tcp  
   dynamic "egress_security_rules" {
-    //allow custom tcp traffic to specific ports from any port in a specific cidr range
-    for_each = var.custom_tcp_egress_rules
+    for_each = local.tcp_egress_security_rules
+    iterator = rule 
     content {
-      protocol = "6"
-      destination   = egress_security_rules.value.dest_cidr
+      protocol    = "6"
+      destination = rule.value.dest_source_cidr == "service_gateway" ? local.service_cidr : rule.value.dest_source_cidr == "anywhere" ? var.anywhere : rule.value.dest_source_cidr == "vcn" ? local.vcn_cidrs[0] : rule.value.dest_source_cidr
+      destination_type = rule.value.dest_source_cidr == "service_gateway" ? "SERVICE_CIDR_BLOCK" : "CIDR_BLOCK"
+      stateless = rule.value.stateless
+      description = rule.value.description
       tcp_options {
-          min = egress_security_rules.value.min
-          max = egress_security_rules.value.max
+        min = rule.value.min 
+        max = rule.value.max != null ? rule.value.max : rule.value.min
       }
     }
   }
 
+  # udp
   dynamic "egress_security_rules" {
-    for_each = var.icmp_egress_service ? { "create" = true } : {}
+    for_each = local.udp_egress_security_rules
+    iterator = rule 
     content {
-      protocol    = "1"
-      destination_type = "SERVICE_CIDR_BLOCK"
-      destination = local.service_cidr
-      description = "allow all outbound icmp traffic to oracle services network"
-    }
-  }
-  
-  dynamic "egress_security_rules" {
-    for_each = toset(var.icmp_egress_cidrs)
-    content {
-      protocol    = "1"
-      destination = egress_security_rules.value
-      description = "allow all outbound icmp traffic to given cidr"
-    }
-  }
-
-  dynamic "egress_security_rules" {
-    //allow traffic to the Oracle Services Network via SGW
-    for_each = var.service_gateway && local.internet_access != "full" ? { "create" = true } : {}
-    content {
-      protocol = "6"
-      destination_type = "SERVICE_CIDR_BLOCK"
-      destination   = local.service_cidr
-    }
-  }
-
-  dynamic "egress_security_rules" {
-    //allow custom udp traffic to specific ports from any port in a specific cidr range
-    for_each = var.custom_udp_egress_rules
-    content {
-      protocol = "17"
-      destination   = egress_security_rules.value.dest_cidr
+      protocol    = "17"
+      destination = rule.value.dest_source_cidr == "service_gateway" ? local.service_cidr : rule.value.dest_source_cidr == "anywhere" ? var.anywhere : rule.value.dest_source_cidr == "vcn" ? local.vcn_cidrs[0] : rule.value.dest_source_cidr
+      destination_type = rule.value.dest_source_cidr == "service_gateway" ? "SERVICE_CIDR_BLOCK" : "CIDR_BLOCK"
+      stateless = rule.value.stateless
+      description = rule.value.description
       udp_options {
-          min = egress_security_rules.value.min
-          max = egress_security_rules.value.max
+        min = rule.value.min 
+        max = rule.value.max != null ? rule.value.max : rule.value.min
       }
     }
   }
 
+
+
+  # icmp
+
+
+dynamic "egress_security_rules" {
+    for_each = local.icmp_egress_security_rules
+    iterator = rule 
+    content {
+      protocol    = "1"
+      destination = rule.value.dest_source_cidr == "service_gateway" ? local.service_cidr : rule.value.dest_source_cidr == "anywhere" ? var.anywhere : rule.value.dest_source_cidr == "vcn" ? local.vcn_cidrs[0] : rule.value.dest_source_cidr
+      destination_type = rule.value.dest_source_cidr == "service_gateway" ? "SERVICE_CIDR_BLOCK" : "CIDR_BLOCK"
+      stateless = rule.value.stateless
+      description = rule.value.description
+      icmp_options {
+        type = rule.value.min 
+        code = rule.value.max 
+      }
+    }
+  }
+*/
 
 
 # Ingress Rules
 
-  dynamic "ingress_security_rules" {
-    for_each = var.ssh_cidr != null ? { "create" = true } : {}
+  # open ports
+ dynamic "ingress_security_rules" {
+    for_each = {for name,rule in var.sl_rules: name => rule if rule.directions == "ingress"}
+    iterator = rule 
     content {
-      protocol = "6"
-      source   = var.ssh_cidr
+      protocol    = rule.value.protocol == "tcp" ? "6" : rule.value.protocol == "udp" ? "17" : "1"
+      source = rule.value.dest_source_cidr == "service" ? local.service_cidr : rule.value.dest_source_cidr == "anywhere" ? var.anywhere : rule.value.dest_source_cidr == "vcn" ? local.vcn_cidrs[0] : rule.value.dest_source_cidr
+      source_type = rule.value.dest_source_cidr == "service" ? "SERVICE_CIDR_BLOCK" : "CIDR_BLOCK"
+      stateless = rule.value.stateless
+      description = rule.value.description
+
+      dynamic "tcp_options" {
+        for_each = rule.value.protocol == "tcp" && rule.value.min != null ? rule : {}
+        iterator = rule
+        content {
+        min = rule.value.min 
+        max = rule.value.max != null ? rule.value.max : rule.value.min
+        }
+      }
+
+      dynamic "udp_options" {
+        for_each = rule.value.protocol == "udp" && rule.value.min != null ? rule : {}
+        iterator = rule
+        content {
+        min = rule.value.min 
+        max = rule.value.max != null ? rule.value.max : rule.value.min
+        }
+      }
+
+      dynamic "icmp_options" {
+        for_each = rule.value.protocol == "icmp" && rule.value.min != null ? rule : {}
+        iterator = rule
+        content {
+        code = rule.value.min 
+        type = rule.value.max != null ? rule.value.max : rule.value.min
+        }
+      }
+    }
+  }
+
+/*
+# tcp
+dynamic "ingress_security_rules" {
+    for_each = local.tcp_ingress_security_rules
+    iterator = rule 
+    content {
+      protocol    = "6"
+      source = rule.value.dest_source_cidr == "service" ? local.service_cidr : rule.value.dest_source_cidr == "anywhere" ? var.anywhere : rule.value.dest_source_cidr == "vcn" ? local.vcn_cidrs[0] : rule.value.dest_source_cidr
+      source_type = rule.value.dest_source_cidr == "service" ? "SERVICE_CIDR_BLOCK" : "CIDR_BLOCK"
+      stateless = rule.value.stateless
+      description = rule.value.description
       tcp_options {
-        min = 22
-        max = 22
+        min = rule.value.min 
+        max = rule.value.max != null ? rule.value.max : rule.value.min
       }
     }
   }
 
-  dynamic "ingress_security_rules" {
-    for_each = var.standard_icmp ? { "create" = true } : {}
-    content {
-      // allow ICMP for all type 3 code 4
-      protocol = "1"
-      source   = "0.0.0.0/0"
-
-      icmp_options {
-        type = "3"
-        code = "4"
-      }
-    }
-  }
-
-  dynamic "ingress_security_rules" {
-    //allow type 3 ICMP from all VCN CIDRs
-    for_each = var.standard_icmp ? toset(local.cidr_blocks) : toset([])
-    content {
-      protocol = "1"
-      source   = ingress_security_rules.value # might be more readable to use an iterator
-      icmp_options {
-        type = "3"
-        code = null #no code reverts to -1
-      }
-    }
-  }
-
-  dynamic "ingress_security_rules" {
-    for_each = toset(var.icmp_ingress_cidrs)
-    content {
-      protocol    = "1"
-      source = ingress_security_rules.value
-      description = "allow all inbound icmp traffic from given cidr"
-    }
-  }
+# udp
 
 dynamic "ingress_security_rules" {
-    //allow traffic to the Oracle Services Network via SGW
-    for_each = var.service_gateway && local.internet_access != "full" ? { "create" = true } : {}
+    for_each = local.udp_ingress_security_rules
+    iterator = rule 
     content {
-      protocol = "6"
-      source_type = "SERVICE_CIDR_BLOCK"
-      source   = local.service_cidr
-    }
-  }
-
-
-  dynamic "ingress_security_rules" {
-    //allow custom tcp traffic to specific ports from any port in a specific cidr range
-    for_each = var.custom_tcp_ingress_rules
-    content {
-      protocol = "6"
-      source   = ingress_security_rules.value.source_cidr
-
-      tcp_options { # TODO: should we add explicit destination port range object
-          min = ingress_security_rules.value.min
-          max = ingress_security_rules.value.max
-      }
-    }
-  }
-  dynamic "ingress_security_rules" {
-    //allows tcp traffic to all ports
-    for_each = toset(var.tcp_all_ports_ingress_cidrs)
-    content {
-      protocol = "6"
-      source = ingress_security_rules.value
-    }
-  }
-
-  dynamic "ingress_security_rules" {
-    // allows udp traffic to specific ports from any port in a specific cidr range
-    for_each = var.custom_udp_ingress_rules
-    content{
-      protocol = "17"
-      source = ingress_security_rules.value.source_cidr 
-
+      protocol    = "17"
+      source = rule.value.dest_source_cidr == "service" ? local.service_cidr : rule.value.dest_source_cidr == "anywhere" ? var.anywhere : rule.value.dest_source_cidr == "vcn" ? local.vcn_cidrs[0] : rule.value.dest_source_cidr
+      source_type = rule.value.dest_source_cidr == "service" ? "SERVICE_CIDR_BLOCK" : "CIDR_BLOCK"
+      stateless = rule.value.stateless
+      description = rule.value.description
       udp_options {
-        min = ingress_security_rules.value.min 
-        max = ingress_security_rules.value.max 
+        min = rule.value.min 
+        max = rule.value.max != null ? rule.value.max : rule.value.min
       }
     }
   }
+
+
+# icmp
+
+dynamic "ingress_security_rules" {
+    for_each = local.icmp_ingress_security_rules
+    iterator = rule 
+    content {
+      protocol    = "17"
+      source = rule.value.dest_source_cidr == "service" ? local.service_cidr : rule.value.dest_source_cidr == "anywhere" ? var.anywhere : rule.value.dest_source_cidr == "vcn" ? local.vcn_cidrs[0] : rule.value.dest_source_cidr
+      source_type = rule.value.dest_source_cidr == "service" ? "SERVICE_CIDR_BLOCK" : "CIDR_BLOCK"
+      stateless = rule.value.stateless
+      description = rule.value.description
+      icmp_options {
+        type = rule.value.min 
+        code = rule.value.max
+      }
+    }
+  }
+*/
 
 }
