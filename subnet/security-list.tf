@@ -28,10 +28,10 @@ variable "sl_rules" {
   default = {
       "egress_traffic" = {
       dest_source_cidr = "anywhere"
-  },
+  },/*
   "service_gateway_traffic" = {
     dest_source_cidr = "service"
-  },/*
+  },
   "ssh_traffic" = {
     dest_source_cidr = "vcn"
     min = 22
