@@ -104,7 +104,7 @@ dynamic "egress_security_rules" {
       description = rule.value.description
 
       dynamic "tcp_options" {
-        for_each = rule.value.protocol == "tcp" || rule.value.protocol == null ? rule.value.min != null ? rule : {} : {}
+        for_each = contains(["tcp", null],rule.value.protocol) && rule.value.min != null ? rule : object()
         iterator = rule
         content {
         min = rule.value.min 
@@ -150,7 +150,7 @@ dynamic "egress_security_rules" {
       description = rule.value.description
 
       dynamic "tcp_options" {
-        for_each = rule.value.protocol == "tcp" || rule.value.protocol == null ? rule.value.min != null ? rule : {} : {}
+        for_each = contains(["tcp", null],rule.value.protocol) && rule.value.min != null ? rule : {}
         iterator = rule
         content {
         min = rule.value.min 
