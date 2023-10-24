@@ -104,7 +104,7 @@ dynamic "egress_security_rules" {
       description = rule.value.description
 
       dynamic "tcp_options" {
-        for_each = rule.value.min == null ? tomap({}) : rule.value.protocol == "tcp" || rule.value.protocol == null ?  rule.value.min => rule.value.max : tomap({})
+        for_each = rule.value.min == null ? tomap({}) : rule.value.protocol == "tcp" || rule.value.protocol == null ?  tomap({rule.value.min => rule.value.max}) : tomap({})
         iterator = port
         content {
         min = port.key
