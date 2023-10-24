@@ -28,7 +28,7 @@ variable "sl_rules" {
   default = {
       "egress_traffic" = {
       dest_source_cidr = "anywhere"
-  },/*
+  },
   "service_gateway_traffic" = {
     dest_source_cidr = "service"
   },
@@ -46,7 +46,7 @@ variable "sl_rules" {
     protocol = "icmp"
     dest_source_cidr = "vcn"
     min = 3
-  }, */
+  },
   "icmp_anywhere" = {
     direction = "ingress"
     protocol = "icmp"
