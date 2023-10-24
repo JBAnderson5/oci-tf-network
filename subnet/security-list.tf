@@ -104,29 +104,29 @@ dynamic "egress_security_rules" {
       description = rule.value.description
 
       dynamic "tcp_options" {
-        for_each = (rule.value.protocol == "tcp" || rule.value.protocol == null) && rule.value.min != null ?  (rule): {}
-        iterator = rule
+        for_each = (rule.value.protocol == "tcp" || rule.value.protocol == null) && rule.value.min != null ?  {(rule.value.min)=(rule.value.max)}: {}
+        iterator = port
         content {
-        min = rule.value.min 
-        max = rule.value.max != null ? rule.value.max : rule.value.min
+        min = port.key
+        max = port.value != null ? port.value : port.key
         }
       }
 
       dynamic "udp_options" {
-        for_each = rule.value.protocol == "udp" && rule.value.min != null ? (rule) : {}
-        iterator = rule
+        for_each = rule.value.protocol == "udp" && rule.value.min != null ? {(rule.value.min)=(rule.value.max)}:{}
+        iterator = port
         content {
-        min = rule.value.min 
-        max = rule.value.max != null ? rule.value.max : rule.value.min
+        min = port.key
+        max = port.value != null ? port.value : port.key
         }
       }
 
       dynamic "icmp_options" {
-        for_each = rule.value.protocol == "icmp" && rule.value.min != null ? (rule) : {}
-        iterator = rule
+        for_each = rule.value.protocol == "icmp" && rule.value.min != null ? {(rule.value.min)=(rule.value.max)}:{}
+        iterator = port
         content {
-        code = rule.value.min 
-        type = rule.value.max != null ? rule.value.max : rule.value.min
+        code = port.key
+        type = port.value != null ? port.value : port.key
         }
       }
 
@@ -151,28 +151,28 @@ dynamic "egress_security_rules" {
 
       dynamic "tcp_options" {
         for_each = (rule.value.protocol == "tcp" || rule.value.protocol == null) && rule.value.min != null ?  {(rule.value.min)=(rule.value.max)}: {}
-        iterator = rule
+        iterator = port
         content {
-        min = rule.value.min 
-        max = rule.value.max != null ? rule.value.max : rule.value.min
+        min = port.key
+        max = port.value != null ? port.value : port.key
         }
       }
 
       dynamic "udp_options" {
-        for_each = rule.value.protocol == "udp" && rule.value.min != null ? (rule): {}
-        iterator = rule
+        for_each = rule.value.protocol == "udp" && rule.value.min != null ? {(rule.value.min)=(rule.value.max)}:{}
+        iterator = port
         content {
-        min = rule.value.min 
-        max = rule.value.max != null ? rule.value.max : rule.value.min
+        min = port.key
+        max = port.value != null ? port.value : port.key
         }
       }
 
       dynamic "icmp_options" {
-        for_each = rule.value.protocol == "icmp" && rule.value.min != null ? (rule) : {}
-        iterator = rule
+        for_each = rule.value.protocol == "icmp" && rule.value.min != null ? {(rule.value.min)=(rule.value.max)}:{}
+        iterator = port
         content {
-        code = rule.value.min 
-        type = rule.value.max != null ? rule.value.max : rule.value.min
+        code = port.key
+        type = port.value != null ? port.value : port.key
         }
       }
     }
