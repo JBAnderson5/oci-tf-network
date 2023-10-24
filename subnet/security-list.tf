@@ -97,7 +97,6 @@ dynamic "egress_security_rules" {
     for_each = {for key,value in var.sl_rules: key => value if value.direction == "egress" || value.direction == null}
     iterator = rule 
     content {
-      label = rule.key
       protocol    = rule.value.protocol == "tcp" || rule.value.protocol == null ? "6" : rule.value.protocol == "udp" ? "17" : "1"
       destination = rule.value.dest_source_cidr == "service" ? local.service_cidr : rule.value.dest_source_cidr == "anywhere" ? var.anywhere : rule.value.dest_source_cidr == "vcn" ? local.cidr_blocks[0] : rule.value.dest_source_cidr
       destination_type = rule.value.dest_source_cidr == "service" ? "SERVICE_CIDR_BLOCK" : "CIDR_BLOCK"
@@ -145,7 +144,6 @@ dynamic "egress_security_rules" {
     iterator = rule 
     
     content {
-      label = rule.key
       protocol    = rule.value.protocol == "tcp" || rule.value.protocol == null  ? "6" : rule.value.protocol == "udp" ? "17" : "1"
       source = rule.value.dest_source_cidr == "service" ? local.service_cidr : rule.value.dest_source_cidr == "anywhere" ? var.anywhere : rule.value.dest_source_cidr == "vcn" ? local.cidr_blocks[0] : rule.value.dest_source_cidr
       source_type = rule.value.dest_source_cidr == "service" ? "SERVICE_CIDR_BLOCK" : "CIDR_BLOCK"
