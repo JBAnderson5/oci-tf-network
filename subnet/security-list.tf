@@ -159,7 +159,7 @@ dynamic "egress_security_rules" {
       }
 
       dynamic "udp_options" {
-        for_each = rule.value.protocol == "udp" && rule.value.min != null ? rule : {object()
+        for_each = rule.value.protocol == "udp" && rule.value.min != null ? rule : object()
         iterator = rule
         content {
         min = rule.value.min 
