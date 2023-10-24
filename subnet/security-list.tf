@@ -152,7 +152,14 @@ dynamic "egress_security_rules" {
     
     content {
       protocol    = rule.value.protocol == "tcp" || rule.value.protocol == null  ? "6" : rule.value.protocol == "udp" ? "17" : "1"
-      source = rule.value.dest_source_cidr == "service" ? local.service_cidr : rule.value.dest_source_cidr == "anywhere" ? var.anywhere : rule.value.dest_source_cidr == "vcn" ? local.cidr_blocks[0] : rule.value.dest_source_cidr
+      source = (
+        rule.value.dest_source_cidr == "service" 
+        ? local.service_cidr 
+        : rule.value.dest_source_cidr == "anywhere" 
+        ? var.anywhere 
+        : rule.value.dest_source_cidr == "vcn" 
+        ? local.cidr_blocks[0] 
+        : rule.value.dest_source_cidr)
       source_type = rule.value.dest_source_cidr == "service" ? "SERVICE_CIDR_BLOCK" : "CIDR_BLOCK"
       stateless = rule.value.stateless
       description = rule.value.description

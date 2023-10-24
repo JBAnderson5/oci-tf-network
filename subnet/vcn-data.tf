@@ -42,13 +42,6 @@ variable "vcn_cidrs" {
 
 # outputs
 
-output "cidr_blocks" {
-  value = local.cidr_blocks[0]
-}
-
-output "service_cidr" {
-  value = local.service_cidr
-}
 
 # logic
 
