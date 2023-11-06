@@ -93,7 +93,7 @@ data "oci_core_services" "this" {
 
   filter {
     name   = "id"
-    values = one(local.service_cidr_lookup.service_id)
+    values = one(local.service_cidr_lookup[0].service_id)
     # regex  = true
   }
 
