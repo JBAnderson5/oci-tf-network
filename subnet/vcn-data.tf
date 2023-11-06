@@ -91,7 +91,7 @@ data "oci_core_services" "this" {
 
   filter {
     name   = "id"
-    values = var.service_gateway.services.0.service_id
+    values = tolist(var.service_gateway.services).service_id
     # regex  = true
   }
 
