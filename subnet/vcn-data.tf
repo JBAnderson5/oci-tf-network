@@ -81,6 +81,8 @@ locals {
     ? var.network.service_cidr.cidr_block
     : null )
 
+  service_cidr_lookup = var.service_gateway != null ? tolist(var.service_gateway.services[*]) : null
+
 }
 
 # resource or mixed module blocks
@@ -91,7 +93,7 @@ data "oci_core_services" "this" {
 
   filter {
     name   = "id"
-    values = one(var.service_gateway.services[*].service_id)
+    values = one(local.service_cidr_lookup.service_id)
     # regex  = true
   }
 
