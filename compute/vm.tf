@@ -46,11 +46,14 @@ variable "ocpus" {
 }
 
 variable "memory" {
-	
+
 }
 
 # outputs
 
+output "instance" {
+  value = oci_core_instance.this
+}
 
 # logic
 
