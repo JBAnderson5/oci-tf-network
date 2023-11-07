@@ -10,6 +10,36 @@ variable "instance_name" {
     type = string
 }
 
+
+variable "instance_ad" {
+  description = "Select availability domain where the compute instance will be created."
+}
+data "oci_identity_availability_domains" "this" {
+  compartment_id = var.compartment_id
+}
+locals {
+  ad_id = [for ad in data.oci_identity_availability_domains.this.availability_domains :
+    ad.id
+    if ad.name == var.instance_ad
+  ][0]
+}
+
+variable "instance_image" {
+
+}
+
+variable "instance_shape" {
+
+}
+
+variable "subnet_id" {
+
+}
+
+variable "ssh_key_list" {
+	
+}
+
 # outputs
 
 
@@ -20,13 +50,15 @@ variable "instance_name" {
 
 
 
+
+
 resource "oci_core_instance" "this" {
     display_name = var.instance_name
 
     compartment_id = var.compartment_id
 
     # Placement
-    availability_domain = "gyIV:PHX-AD-2"
+    availability_domain = var.instance_ad
     # Fault Domain
     # Capacity Type
     
@@ -37,17 +69,17 @@ resource "oci_core_instance" "this" {
 
     # Image and Shape
     source_details {
-		source_id = "ocid1.image.oc1.phx.aaaaaaaavitkmkuakgkiv5jbu365dd6hqr6do6lrqshhvgut5564ndcoeyaa"
+		source_id = var.instance_image
 		source_type = "image"
 	}
-    shape = "VM.Standard.E2.1.Micro"
+    shape = var.instance_shape
 
     # Vnic info
     create_vnic_details {
-		assign_ipv6ip = "false"
 		assign_private_dns_record = "true"
 		assign_public_ip = "false"
-		subnet_id = "ocid1.subnet.oc1.phx.aaaaaaaaxx2q5uvvkistp2opzys44cukwe6ahyfmfkq7opq7u4hymzweqmca"
+		#nsg_ids = [nsg ocids]
+		subnet_id = var.subnet_id
 	}
     # IPV6
     # DNS
@@ -56,8 +88,8 @@ resource "oci_core_instance" "this" {
     
     ## SSH keys
     metadata = {
-		"user_data" = "IyEvYmluL2Jhc2gKc3VkbyBhcHQgdXBkYXRlICYmIHN1ZG8gYXB0IHVwZ3JhZGU="
-		"ssh_authorized_keys" = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQCWuECJQA/GZLPCR///6rUSIPYjfkuwjxHRHJ+I5pS+WdQDdPSjvfH3fKAITlRnO5t57tNDpwooQSZh6v6eK9tPHu1XzeBUVRLgflusPjfgtK4pFLKmBJN0PaZ2G4CvGDvWvb7+DYpWrNgb2pCuMf2nz375IbSwBFAJx7CIkuqefLd3r4APfpGluDTdk3ibJu/wdCQQDMqxWYpomPvYA1wJgnZcfCn1ZsZM2cJVzOtYzzadgLjKYaxtKjQznMLNd+CrysEbLERxF9lBmEiARxFHfkGQYDfyOMmeHsYQgzG/fvYLWnGXRauPDqGSDQNB7Y2abdPzuD5exp+6IPnD12LmzcwBfvEy/NMdac9DmQPpFDX5cctIg7SpRmO0zK20cAHePyU0KFmdBJIGNavltFrsqsuWrFous+1He5O8S3z/AEYDJ5mky/4tttfBChq1HINzITGf7ypeEUWeqCtp5gbX1qBojeYZecLBUIn/6UT+k2etzRQjfF+fPHhdbIdNFE1KoI2I8g2SnPXcMh9am0EXCF8KOL6RxovCinf2pZBYauFbOZrj6xoy+0jlSNEa5dtZAx3SfT+jVgDeNnRQCy2XQp0WFe0SLQBKMNJGb8tCXEcKgde+QqMgYMBg7YJCVuYd5k5ZamDmtbIEHboWZDggZM676P7XQFSM3VBO+jlMow== jbhermosa5@gmail.com"
+		# "user_data" = 
+		"ssh_authorized_keys" = var.ssh_key_list
 	}
 
     # Boot Volume
