@@ -37,6 +37,15 @@ variable "subnet_id" {
 }
 
 variable "ssh_key_list" {
+
+}
+
+
+variable "ocpus" {
+
+}
+
+variable "memory" {
 	
 }
 
@@ -73,6 +82,11 @@ resource "oci_core_instance" "this" {
 		source_type = "image"
 	}
     shape = var.instance_shape
+	shape_config {
+		ocpus = var.ocpus 
+		memory_in_gbs = var.memory
+	}
+
 
     # Vnic info
     create_vnic_details {
