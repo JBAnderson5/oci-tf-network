@@ -190,3 +190,18 @@ resource "oci_core_internet_gateway" "this" {
     enabled = var.allow_internet_traffic
 
 }
+
+
+
+
+terraform {
+
+  required_version = ">= 1.0.0"
+
+  required_providers {
+    oci = {
+      source  = "oracle/oci"
+      version = ">= 4.69.0"
+    }
+  }
+}
