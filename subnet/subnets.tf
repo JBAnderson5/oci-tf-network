@@ -77,3 +77,15 @@ resource "oci_core_subnet" "this" {
 
 
 
+
+terraform {
+
+  required_version = ">= 1.0.0"
+
+  required_providers {
+    oci = {
+      source  = "oracle/oci"
+      version = ">= 4.69.0"
+    }
+  }
+}
