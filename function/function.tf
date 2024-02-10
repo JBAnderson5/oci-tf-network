@@ -283,7 +283,13 @@ resource "oci_functions_function" "these" {
 
 
     dynamic trace_config {
-        for_each = var.apm_domain_id != null ? {apm=var.apm_domain_id}:{}
+        for_each = (
+            var.apm_domain_id != null 
+                ? {apm=var.apm_domain_id}
+            : var.create_apm_domain 
+                ? {apm=oci_apm_apm_domain.this[0].id}
+                : {}
+        )
         iterator = trace
         content {
           is_enabled = true
