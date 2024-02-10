@@ -1,0 +1,59 @@
+# Copyright © 2022, Oracle and/or its affiliates.
+# All rights reserved. Licensed under the Universal Permissive License (UPL), Version 1.0 as shown at https://oss.oracle.com/licenses/upl.
+
+
+title: "basic subnet stack"
+description: "This example stack shows a basic setup using the network and subnet modules"
+schemaVersion: 1.1.0
+version: "20190404" 
+
+
+locale: en
+
+variableGroups:
+  - title: "RM controlled Vars"
+    visible: false
+    variables:
+      - tenancy_ocid
+      - region
+      - current_user_ocid
+      - fingerprint
+      - private_key_path
+  
+  - title: "VCN config"
+    variables:
+      - subnet_id
+
+
+variables:
+  #"RM controlled Vars"
+  tenancy_ocid:
+    type: string
+    title: Tenancy ID
+    description: OCID of the tenancy
+    required: true
+
+  region:
+    type: oci:identity:region:name
+    title: Region
+    description: region to create resources
+    required: true
+
+  current_user_ocid:
+    type: string
+
+  fingerprint:
+    type: string
+    default: " "
+
+  private_key_path:
+    type: string
+    default: " "
+
+
+  compartment_id:
+    type: oci:identity:compartment:id
+    default: tenancy_ocid
+
+  subnet_id: 
+    type: string
