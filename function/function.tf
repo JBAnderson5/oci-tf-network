@@ -319,4 +319,13 @@ resource "oci_functions_function" "these" {
 
 terraform {
   experiments = [module_variable_optional_attrs]
+
+  required_version = ">= 1.0.0"
+
+  required_providers {
+    oci = {
+      source  = "oracle/oci"
+      version = ">= 4.69.0"
+    }
+  }
 }
