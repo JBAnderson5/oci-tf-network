@@ -48,7 +48,10 @@ variable "create_apm_domain" {
 }
 
 
-
+variable "create_logging_group" {
+  type = bool 
+  default = true 
+}
 variable "logging_group_id" {
   type = string 
   default = null
@@ -115,7 +118,7 @@ output "apm_dompain" {
 }
 
 output "log_group" {
-    value = var.logging_group_id == null ? oci_logging_log_group.this[0] : null
+    value = var.create_logging_group ? oci_logging_log_group.this[0] : null
 }
 
 output "log" {
@@ -230,14 +233,14 @@ image_policy_config {
 
 
 resource "oci_logging_log_group" "this" {
-    count = var.logging_group_id == null ? 1 : 0
+    count = var.create_logging_group ? 1 : 0
   compartment_id = var.compartment_id
   display_name   = "${var.app_name}_functions"
 }
 
 resource "oci_logging_log" "this" {
   display_name = "${var.app_name}_functions"
-  log_group_id = var.logging_group_id == null ? oci_logging_log_group.this[0].id : var.logging_group_id
+  log_group_id = var.create_logging_group ? oci_logging_log_group.this[0].id : var.logging_group_id
   log_type     = "SERVICE"
 
   configuration {
