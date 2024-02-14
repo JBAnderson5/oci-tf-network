@@ -145,8 +145,7 @@ data "oci_artifacts_container_repository" "this" {
     count = var.ocir_id != null ? 1 : 0
     repository_id = var.ocir_id
 
-    is_immutable = true
-    is_public = false
+    
 
 }
 
@@ -187,6 +186,9 @@ resource "oci_artifacts_container_repository" "this" {
 
     compartment_id = var.compartment_id
     display_name = "${var.app_name}_functions"
+
+    is_immutable = true
+    is_public = false
 
 }
 
