@@ -64,22 +64,23 @@ variable "log_retention" {
 }
 
 
-variable "image_prefix" {
-  type = string
-  default = null 
-  description = "format: <region_endpoint>/<tenancy_namespace>/<repo_name>/"
+
+variable "create_ocir" {
+  type = bool 
+  default = false
 }
 variable "ocir_id" {
   type = string 
   default = null
 }
-variable "create_ocir" {
-  type = bool 
-  default = false
-}
 variable "region" {
     type = string 
     default = null
+}
+variable "image_prefix" {
+  type = string
+  default = null 
+  description = "format: <region_endpoint>/<tenancy_namespace>/<repo_name>/"
 }
 
 
@@ -142,7 +143,7 @@ data "oci_identity_regions" "this" {
 }
 
 data "oci_artifacts_container_repository" "this" {
-    count = var.ocir_id != null ? 1 : 0
+    count = !var.create_ocir ? 1 : 0
     repository_id = var.ocir_id
 
     
@@ -182,7 +183,7 @@ resource "oci_apm_apm_domain" "this" {
 }
 
 resource "oci_artifacts_container_repository" "this" {
-    count = var.create_ocir && var.ocir_id == null ? 1 : 0
+    count = var.create_ocir ? 1 : 0
 
     compartment_id = var.compartment_id
     display_name = "${var.app_name}_functions"
