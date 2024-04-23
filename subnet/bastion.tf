@@ -9,8 +9,8 @@ variable "enable_bastion" {
 
 
 variable "bastion_allowlist" {
-    type = string 
-    default = "[0.0.0.0/0]"
+    type = list(string)
+    default = ["0.0.0.0/0"]
 }
 
 variable "dns_proxy" {
