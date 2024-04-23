@@ -28,6 +28,10 @@ variable "max_ttl" {
 
 # outputs
 
+output bastion_id {
+    value = var.enable_bastion ? oci_bastion_bastion.this[0].id : null
+}
+
 # logic 
 
 # resource or mixed module blocks

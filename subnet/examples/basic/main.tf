@@ -58,4 +58,5 @@ module "subnet" {
     subnet_dns_label = "mysubdomain"
     cidr_block = "10.0.1.0/24"
     
+    enable_bastion = true
 }
