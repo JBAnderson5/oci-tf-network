@@ -164,11 +164,8 @@ data "oci_identity_regions" "this" {
 }
 
 data "oci_artifacts_container_repository" "this" {
-    count = !var.create_ocir ? 1 : 0
+    count = var.ocir_id != null ? 1 : 0
     repository_id = var.ocir_id
-
-    
-
 }
 
 
@@ -186,7 +183,7 @@ locals {
         )
 
   image_prefix =(
-    length(var.functions) < 1
+    length(var.functions) < 1 || var.ocir_id == null
         ? ""
         : var.image_prefix != null
             ? var.image_prefix
