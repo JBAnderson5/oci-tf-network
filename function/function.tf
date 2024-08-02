@@ -21,7 +21,7 @@ variable "nsg_ids" {
 }
 
 variable "shape" {
-  type = string 
+  type = string
   default = "GENERIC_X86"
   description = "Accepted values are: GENERIC_X86, GENERIC_ARM, GENERIC_X86_ARM"
 }
@@ -38,27 +38,27 @@ variable "app_config" {
 
 
 variable "apm_domain_id" {
-    type = string 
+    type = string
     description = "the domain to use for Application Performance Monitoring"
     default = null
 }
 variable "create_apm_domain" {
-  type = bool 
+  type = bool
   default = false
 }
 
 
 variable "create_logging_group" {
-  type = bool 
-  default = true 
+  type = bool
+  default = true
 }
 variable "logging_group_id" {
-  type = string 
+  type = string
   default = null
 }
 
 variable "log_retention" {
-  type = number 
+  type = number
   default = 30
   description = "amount of time to retain logs in 30 day increments. Valid values: 30,60,90,120,150,180"
 }
@@ -66,20 +66,20 @@ variable "log_retention" {
 
 
 variable "create_ocir" {
-  type = bool 
+  type = bool
   default = false
 }
 variable "ocir_id" {
-  type = string 
+  type = string
   default = null
 }
 variable "region" {
-    type = string 
+    type = string
     default = null
 }
 variable "image_prefix" {
   type = string
-  default = null 
+  default = null
   description = "format: <region_endpoint>/<tenancy_namespace>/<repo_name>/"
 }
 
@@ -87,19 +87,40 @@ variable "image_prefix" {
 variable "functions" {
     description = "a list of objects describing the functions to deploy"
     type = list(object({
-      name = string 
+      name = string
 
       memory = number
       timeout = optional(number)
 
       config = optional(map(string))
 
-     image_name = string
-     image_version = string
+      # either need to provide the full url or the name and version.
+      image_full_url = optional(string)
+      image_name = optional(string)
+      image_version = optional(string)
 
       concurrency_set_count = optional(number) # values 1-x. will be automatically converted for you
+
     }))
     default = []
+}
+
+
+# Schedules only currently work in phoenix region
+variable "schedules" {
+  type = map(object({
+    description = optional(string)
+
+    recurrence_details = string # "30 19 * * *"
+    recurrence_type = string # cron
+
+    function_names = list(string) # todo relate function name to id or include this in functions object
+
+    time_ends = string  # 2016-08-25T21:10:29.600Z
+    time_starts = string # 2016-08-25T21:10:29.600Z
+
+  }))
+  default = {}
 }
 
 
@@ -157,18 +178,18 @@ data "oci_artifacts_container_repository" "this" {
 locals {
 
     ocir = (
-        var.ocir_id != null 
+        var.ocir_id != null
             ? data.oci_artifacts_container_repository.this[0]
-        : var.create_ocir 
+        : var.create_ocir
             ? oci_artifacts_container_repository.this[0]
-        : null 
+        : null
         )
 
-  image_prefix =( 
+  image_prefix =(
     length(var.functions) < 1
         ? ""
-        : var.image_prefix != null 
-            ? var.image_prefix 
+        : var.image_prefix != null
+            ? var.image_prefix
             : "${lower(data.oci_identity_regions.this[0].regions[0].key)}.ocir.io/${local.ocir.namespace}/${local.ocir.display_name}/"
   )
 }
@@ -212,7 +233,6 @@ resource "oci_functions_application" "this" {
           domain_id = var.apm_domain_id != null ? var.apm_domain_id : oci_apm_apm_domain.this[0].id
           is_enabled = true
         }
-      
     }
 /*
   trace_config {
@@ -280,7 +300,7 @@ resource "oci_functions_function" "these" {
 
 
 
-    image = "${local.image_prefix}${each.value.image_name}:${each.value.image_version}" 
+    image = each.value.image_full_url != null ? each.value.image_full_url : "${local.image_prefix}${each.value.image_name}:${each.value.image_version}"
     # TODO: do we need to use the image digest
     # image_digest = var.function_image_digest
     /*
@@ -294,9 +314,9 @@ resource "oci_functions_function" "these" {
 
     dynamic trace_config {
         for_each = (
-            var.apm_domain_id != null 
+            var.apm_domain_id != null
                 ? {apm=var.apm_domain_id}
-            : var.create_apm_domain 
+            : var.create_apm_domain
                 ? {apm=oci_apm_apm_domain.this[0].id}
                 : {}
         )
@@ -304,9 +324,9 @@ resource "oci_functions_function" "these" {
         content {
           is_enabled = true
         }
-      
+
     }
-    
+
 
     # https://docs.oracle.com/en-us/iaas/Content/Functions/Tasks/functionsusingprovisionedconcurrency.htm
     dynamic "provisioned_concurrency_config" {
@@ -322,8 +342,33 @@ resource "oci_functions_function" "these" {
                 : each.value.concurrency_set_count*10
             )
         }
-      
+
     }
+}
+
+resource "oci_resource_scheduler_schedule" "these" {
+  for_each = var.schedules
+  # for_each = oci_functions_function.these
+
+  action = "START_RESOURCE" #TODO: verify this is how to initiate a function as functions don't start/stop
+  compartment_id = var.compartment_id
+
+  recurrence_details = each.value.recurrence_details
+  recurrence_type = each.value.recurrence_type
+
+  description = each.value.description
+  display_name = "${each.key}-schedule"
+
+
+  dynamic "resources" {
+    for_each = each.value.function_names
+    content {
+      id = resources.value # TODO lookup id from name
+    }
+  }
+
+  time_ends = each.value.time_ends
+  time_starts = each.value.time_starts
 }
 
 
@@ -335,7 +380,7 @@ terraform {
   required_providers {
     oci = {
       source  = "oracle/oci"
-      version = ">= 4.69.0"
+      version = ">= 5.0.0"
     }
   }
 }
