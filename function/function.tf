@@ -197,24 +197,23 @@ locals {
 resource "oci_apm_apm_domain" "this" {
     count = var.create_apm_domain ? 1 : 0
     compartment_id = var.compartment_id
-    display_name = "${var.app_name}_functions"
+    display_name = "${var.app_name}-funcapm"
 }
 
 resource "oci_artifacts_container_repository" "this" {
     count = var.create_ocir ? 1 : 0
 
     compartment_id = var.compartment_id
-    display_name = "${var.app_name}_functions"
+    display_name = "${var.app_name}-funcocir"
 
     is_immutable = true
     is_public = false
 
 }
 
-
 resource "oci_functions_application" "this" {
   compartment_id = var.compartment_id
-  display_name   = var.app_name
+  display_name   = "${var.app_name}-funcapp"
 
   subnet_ids     = var.subnet_ids
   network_security_group_ids = var.nsg_ids
@@ -259,11 +258,11 @@ image_policy_config {
 resource "oci_logging_log_group" "this" {
     count = var.create_logging_group ? 1 : 0
   compartment_id = var.compartment_id
-  display_name   = "${var.app_name}_functions"
+  display_name   = "${var.app_name}-funclog-group"
 }
 
 resource "oci_logging_log" "this" {
-  display_name = "${var.app_name}_functions"
+  display_name = "${var.app_name}-funclog"
   log_group_id = var.create_logging_group ? oci_logging_log_group.this[0].id : var.logging_group_id
   log_type     = "SERVICE"
 
@@ -287,7 +286,7 @@ resource "oci_functions_function" "these" {
     for_each = {for func in var.functions: func.name => func}
 
     application_id = oci_functions_application.this.id
-    display_name = each.key
+    display_name = "${each.key}-func"
 
     memory_in_mbs = each.value.memory
     timeout_in_seconds = each.value.timeout == null ? 30 : each.value.timeout
@@ -328,7 +327,7 @@ resource "oci_functions_function" "these" {
     # https://docs.oracle.com/en-us/iaas/Content/Functions/Tasks/functionsusingprovisionedconcurrency.htm
     dynamic "provisioned_concurrency_config" {
         for_each = each.value.concurrency_set_count != null ? {1=1} : {}
-        iterator = concurrency 
+        iterator = concurrency
         content {
             strategy = each.value.concurrency_set_count == null ? "NONE" : "CONSTANT"
             count = (
