@@ -164,7 +164,7 @@ data "oci_identity_regions" "this" {
 }
 
 data "oci_artifacts_container_repository" "this" {
-    count = create_ocir ? 1 : 0
+    count = var.create_ocir ? 1 : 0
     repository_id = var.ocir_id
 }
 
