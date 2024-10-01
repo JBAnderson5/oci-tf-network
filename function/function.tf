@@ -164,7 +164,7 @@ data "oci_identity_regions" "this" {
 }
 
 data "oci_artifacts_container_repository" "this" {
-    count = ! var.create_ocir ? 1 : 0
+    count = var.ocir_id != null ? 1 : 0
     repository_id = var.ocir_id
 }
 
@@ -175,11 +175,11 @@ data "oci_artifacts_container_repository" "this" {
 locals {
 
     ocir = (
-        var.ocir_id != null
-            ? data.oci_artifacts_container_repository.this[0]
-        : var.create_ocir
+      var.create_ocir
             ? oci_artifacts_container_repository.this[0]
-        : null
+            : var.ocir_id != null
+              ? data.oci_artifacts_container_repository.this[0]
+              : null
         )
 
   image_prefix =(
@@ -208,7 +208,6 @@ resource "oci_artifacts_container_repository" "this" {
 
     is_immutable = true
     is_public = false
-
 }
 
 resource "oci_functions_application" "this" {
