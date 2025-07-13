@@ -80,12 +80,12 @@ resource "oci_core_subnet" "this" {
 
 terraform {
 
-  required_version = ">= 1.0.0, < 2.0.0"
+  required_version = ">1.5.0"
 
   required_providers {
     oci = {
       source  = "oracle/oci"
-      #version = ">= 5.17.0, < 6.0.0"
+      version = ">7.9.0"
     }
   }
 }

@@ -370,12 +370,12 @@ resource "oci_resource_scheduler_schedule" "these" {
 terraform {
   experiments = [module_variable_optional_attrs]
 
-  required_version = ">= 1.0.0"
+  required_version = ">1.5.0"
 
   required_providers {
     oci = {
       source  = "oracle/oci"
-      version = ">= 5.0.0"
+      version = ">7.9.0"
     }
   }
 }
